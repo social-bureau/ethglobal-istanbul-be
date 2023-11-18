@@ -1,16 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Query,
-  Req,
-  UploadedFile,
-  UseInterceptors,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { ApiService } from './api.service';
 import { FirebaseService } from 'src/utils/firebase/firebase.service';
 import { Auth } from 'src/auth/decorator/auth.decorator';
@@ -22,6 +10,9 @@ import { ConversationType } from 'src/models/conversation.interface';
 import { CreateConversationInput } from './dto/create-conversation.input';
 import { GetMyConversationDto } from './dto/get-my-conversation.dto';
 import { GetConversationDto } from './dto/get-conversation.dto';
+import { ConversationMessageType } from 'src/models/conversation-message.interface';
+import { SendConversationInput } from './dto/send-conversation.input';
+import { v4 as uuidv4 } from 'uuid';
 
 @Controller('api')
 export class ApiController {
@@ -123,6 +114,32 @@ export class ApiController {
   }
 
   @Auth()
+  @Post('chats/conversations/:conversationId/send')
+  async sendConversation(
+    @Req() req: any,
+    @Param('conversationId') conversationId: string,
+    @Body() body: SendConversationInput
+  ) {
+    const { user } = req;
+    const { text, contentType = ConversationMessageType.TEXT, optional = {} } = body;
+    const conversationMessages = [];
+    const rand = Math.floor(100000 + Math.random() * 900000);
+    const time = new Date();
+    const res = await this.firebaseService.uploadText(`files/chats/${rand}/${time.getTime()}`, text, `${uuidv4()}`);
+    if (res) {
+      const conversationMessage = await this.apiService.sendConversation({
+        conversationId,
+        content: res,
+        contentType,
+        senderId: user.id,
+        optional,
+      });
+      conversationMessages.push(conversationMessage);
+    }
+    return conversationMessages;
+  }
+
+  @Auth()
   @Get('chats/conversations/:conversationId')
   async getConversationMessages(
     @Req() req: any,
@@ -132,6 +149,19 @@ export class ApiController {
     const { user } = req;
     const { page = 1, limit = 10 } = query;
     const conversations = await this.apiService.getConversationMessages(user.id, conversationId, page, limit);
+    return conversations;
+  }
+
+  @Auth()
+  @Get('chats/media/conversations/:conversationId')
+  async getMediaConversation(
+    @Req() req: any,
+    @Param('conversationId') conversationId: string,
+    @Query() query: GetConversationDto
+  ) {
+    const { user } = req;
+    const { contentType = ConversationMessageType.IMAGE, page = 1, limit = 10 } = query;
+    const conversations = await this.apiService.getMediaConversation(user.id, conversationId, contentType, page, limit);
     return conversations;
   }
 }

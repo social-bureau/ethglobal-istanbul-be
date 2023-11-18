@@ -1,5 +1,6 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import _ from 'lodash';
+import { ConversationMessageType } from 'src/models/conversation-message.interface';
 import { ConversationType } from 'src/models/conversation.interface';
 import { FirebaseService } from 'src/utils/firebase/firebase.service';
 import { PaginationService } from 'src/utils/pagination/pagination.service';
@@ -227,6 +228,23 @@ export class ApiService {
     return conversations;
   }
 
+  async sendConversation(payload) {
+    const { conversationId, senderId } = payload;
+    const conversation = await this.isParticipant(conversationId, senderId);
+    const conversationMessage = await this.storageService.create('conversation-messages', payload);
+    await this.storageService.update('conversations', conversationId, { updatedAt: new Date() });
+
+    // Update realtime
+    for (const participant of conversation.participants) {
+      if (participant.id !== senderId) {
+        Logger.debug(`sending push to ${participant.id}`);
+        await this.storageService.saveOrUpdateRealTime(`${participant.id}/latestMessage`, conversationMessage);
+      }
+    }
+
+    return conversationMessage;
+  }
+
   async getConversationMessages(userId: string, conversationId: string, page: number, limit: number) {
     const conversation = await this.isParticipant(conversationId, userId);
     const conversationMessages = await this.storageService.paginate(
@@ -243,5 +261,33 @@ export class ApiService {
       }
     }
     return { participants: conversation.participants, conversationMessages };
+  }
+
+  async getMediaConversation(
+    userId: string,
+    conversationId: string,
+    contentType: ConversationMessageType,
+    page: number,
+    limit: number
+  ) {
+    await this.isParticipant(conversationId, userId);
+    const conversationMessages = await this.storageService.paginate(
+      'conversation-messages',
+      { conversationId, contentType },
+      { createdAt: 'desc' },
+      page,
+      limit
+    );
+    for (const [key, conversation] of Object.entries(conversationMessages.results)) {
+      if (conversation.content !== null) {
+        const content = await this.storageService.fecthTextURL(conversation.content);
+        const data = {
+          content,
+          optional: conversation.optional,
+        };
+        conversationMessages.results[key] = data;
+      }
+    }
+    return conversationMessages;
   }
 }
