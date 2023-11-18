@@ -13,10 +13,15 @@ import { GetConversationDto } from './dto/get-conversation.dto';
 import { ConversationMessageType } from 'src/models/conversation-message.interface';
 import { SendConversationInput } from './dto/send-conversation.input';
 import { v4 as uuidv4 } from 'uuid';
+import { Web3StorageService } from 'src/utils/web3storage/web3storage.service';
 
 @Controller('api')
 export class ApiController {
-  constructor(private apiService: ApiService, private firebaseService: FirebaseService) {}
+  constructor(
+    private apiService: ApiService,
+    private firebaseService: FirebaseService,
+    private web3StorageService: Web3StorageService
+  ) {}
 
   // Me
   @Auth()
@@ -123,9 +128,7 @@ export class ApiController {
     const { user } = req;
     const { text, contentType = ConversationMessageType.TEXT, optional = {} } = body;
     const conversationMessages = [];
-    const rand = Math.floor(100000 + Math.random() * 900000);
-    const time = new Date();
-    const res = await this.firebaseService.uploadText(`files/chats/${rand}/${time.getTime()}`, text, `${uuidv4()}`);
+    const res = await this.web3StorageService.uploadToWeb3Storage(text, `${conversationId}/${uuidv4()}.txt`);
     if (res) {
       const conversationMessage = await this.apiService.sendConversation({
         conversationId,
