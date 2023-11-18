@@ -14,15 +14,18 @@ import { ConversationMessageType } from 'src/models/conversation-message.interfa
 import { SendConversationInput } from './dto/send-conversation.input';
 import { v4 as uuidv4 } from 'uuid';
 import { Web3StorageService } from 'src/utils/web3storage/web3storage.service';
+import { IpfsConfig } from './../common/configs/config.interface';
+import { ConfigService } from '@nestjs/config/dist/config.service';
 
 @Controller('api')
 export class ApiController {
   constructor(
     private apiService: ApiService,
     private firebaseService: FirebaseService,
-    private web3StorageService: Web3StorageService
+    private web3StorageService: Web3StorageService,
+    private configService: ConfigService
   ) {}
-
+  private IpfsConfig = this.configService.get<IpfsConfig>('ipfs');
   // Me
   @Auth()
   @Get('users/me')
@@ -128,11 +131,12 @@ export class ApiController {
     const { user } = req;
     const { text, contentType = ConversationMessageType.TEXT, optional = {} } = body;
     const conversationMessages = [];
-    const res = await this.web3StorageService.uploadToWeb3Storage(text, `${conversationId}/${uuidv4()}.txt`);
-    if (res) {
+    const fileName = `${uuidv4()}.txt`;
+    const cid = await this.web3StorageService.uploadToWeb3Storage(text, fileName);
+    if (cid) {
       const conversationMessage = await this.apiService.sendConversation({
         conversationId,
-        content: res,
+        content: `${this.IpfsConfig.gateway}/${cid}/${fileName}`,
         contentType,
         senderId: user.id,
         optional,

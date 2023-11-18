@@ -46,6 +46,7 @@ export const createNestServer = async (expressInstance: express.Express) => {
   // Validation
   app.useGlobalPipes(
     new ValidationPipe({
+      transform: true,
       whitelist: true,
       forbidNonWhitelisted: true,
     })

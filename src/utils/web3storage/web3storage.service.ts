@@ -1,13 +1,27 @@
-import { Injectable } from '@nestjs/common';
-import { create } from '@web3-storage/w3up-client';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Web3Storage, File } from 'web3.storage';
 
 @Injectable()
 export class Web3StorageService {
-  async uploadToWeb3Storage(text: string, filePath: string) {
-    const client = await create();
-    await client.setCurrentSpace(`did:key:${process.env.WEB3STORAGE_KEY}`);
-    const files = [new File([Buffer.from(text)], filePath)];
-    const uploaded = await client.uploadDirectory(files);
-    return uploaded;
+  async makeStorageClient() {
+    const token = process.env.WEB3STORAGE_TOKEN;
+    if (!token) {
+      throw new HttpException(
+        {
+          status: HttpStatus.FORBIDDEN,
+          errors: {
+            message: 'Web3storage token not found in the environment.',
+          },
+        },
+        HttpStatus.FORBIDDEN
+      );
+    }
+    return new Web3Storage({ token });
+  }
+  async uploadToWeb3Storage(text: string, fileName: string) {
+    const client = await this.makeStorageClient();
+    const files = [new File([Buffer.from(text)], fileName, { type: 'text/plain' })];
+    const cid = await client.put(files);
+    return cid;
   }
 }

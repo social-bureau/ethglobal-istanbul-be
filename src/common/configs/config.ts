@@ -25,6 +25,9 @@ const config: Config = {
     refreshIn: '7d',
     bcryptSaltOrRound: 10,
   },
+  ipfs: {
+    gateway: 'https://w3s.link/ipfs',
+  },
 };
 
 export default (): Config => config;

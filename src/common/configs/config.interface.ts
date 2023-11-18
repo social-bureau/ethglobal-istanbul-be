@@ -4,6 +4,7 @@ export interface Config {
   swagger: SwaggerConfig;
   graphql: GraphqlConfig;
   security: SecurityConfig;
+  ipfs: IpfsConfig;
 }
 
 export interface NestConfig {
@@ -56,4 +57,8 @@ export interface FirebaseClientConfig {
   messagingSenderId: string;
   appId: string;
   measurementId: string;
+}
+
+export interface IpfsConfig {
+  gateway: string;
 }
