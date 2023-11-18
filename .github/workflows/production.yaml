@@ -23,5 +23,5 @@ jobs:
         docker push ${{ env.CONTAINER_LATEST_IMAGE }}
 
     env:
-      CONTAINER_DEV_IMAGE: registry.digitalocean.com/ethglobal-istanbull-n2n:${{ github.sha }}
-      CONTAINER_LATEST_IMAGE: registry.digitalocean.com/ethglobal-istanbull-n2n:latest
+      CONTAINER_DEV_IMAGE: registry.digitalocean.com/ethglobal-istanbull-n2n/ethglobal-istanbul-be:${{ github.sha }}
+      CONTAINER_LATEST_IMAGE: registry.digitalocean.com/ethglobal-istanbull-n2n/ethglobal-istanbul-be:latest
