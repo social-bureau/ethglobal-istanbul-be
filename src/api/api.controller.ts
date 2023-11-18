@@ -21,6 +21,7 @@ import { GetContactDto } from './dto/get-contact.dto';
 import { ConversationType } from 'src/models/conversation.interface';
 import { CreateConversationInput } from './dto/create-conversation.input';
 import { GetMyConversationDto } from './dto/get-my-conversation.dto';
+import { GetConversationDto } from './dto/get-conversation.dto';
 
 @Controller('api')
 export class ApiController {
@@ -118,6 +119,19 @@ export class ApiController {
     const { user } = req;
     const { page = 1, limit = 10 } = query;
     const conversations = await this.apiService.getConversationListByUserId(user.id, page, limit);
+    return conversations;
+  }
+
+  @Auth()
+  @Get('chats/conversations/:conversationId')
+  async getConversationMessages(
+    @Req() req: any,
+    @Param('conversationId') conversationId: string,
+    @Query() query: GetConversationDto
+  ) {
+    const { user } = req;
+    const { page = 1, limit = 10 } = query;
+    const conversations = await this.apiService.getConversationMessages(user.id, conversationId, page, limit);
     return conversations;
   }
 }

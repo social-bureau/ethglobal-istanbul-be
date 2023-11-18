@@ -226,4 +226,22 @@ export class ApiService {
     }
     return conversations;
   }
+
+  async getConversationMessages(userId: string, conversationId: string, page: number, limit: number) {
+    const conversation = await this.isParticipant(conversationId, userId);
+    const conversationMessages = await this.storageService.paginate(
+      'conversation-messages',
+      { conversationId },
+      { createdAt: 'desc' },
+      page,
+      limit
+    );
+    for (const [key, conversation] of Object.entries(conversationMessages.results)) {
+      if (conversation.content !== null) {
+        const content = await this.storageService.fecthTextURL(conversation.content);
+        conversationMessages.results[key].content = content;
+      }
+    }
+    return { participants: conversation.participants, conversationMessages };
+  }
 }
