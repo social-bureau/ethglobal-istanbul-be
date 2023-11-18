@@ -1,0 +1,30 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - production
+
+jobs:
+  deploy-prod:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Login to Docker registry
+      run: docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_PASSWORD }} registry.digitalocean.com
+
+    - name: Build and push Docker images
+      run: |
+        docker build --pull -t ${{ env.CONTAINER_DEV_IMAGE }} -t ${{ env.CONTAINER_LATEST_IMAGE }} .
+        docker push ${{ env.CONTAINER_DEV_IMAGE }}
+        docker push ${{ env.CONTAINER_LATEST_IMAGE }}
+
+    env:
+      CONTAINER_DEV_IMAGE: registry.digitalocean.com/ethglobal-istanbull-n2n:${{ github.sha }}
+      CONTAINER_LATEST_IMAGE: registry.digitalocean.com/ethglobal-istanbull-n2n:latest
+
+    only:
+      - production
