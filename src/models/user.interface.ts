@@ -1,7 +1,7 @@
 import { Role } from './role.enum';
 
 export interface User {
-  uid: string;
+  id: string;
   profileName?: string;
   email?: string;
   mobilePhone?: string;
@@ -16,6 +16,8 @@ export interface User {
 
   publicAddress: string;
   nonce?: number;
+
+  lensId: string;
 
   createdAt: Date;
   updatedAt: Date;

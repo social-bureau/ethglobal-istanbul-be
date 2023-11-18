@@ -7,7 +7,13 @@ import { AuthenticationPubliAddressInput } from './dto/auth-public-address.input
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @Post('singin/public-address')
+  @Post('mock-signin')
+  async mockSignIn(@Body() body: SigninPublicAddressInput) {
+    const result = await this.authService.mockSignIn(body);
+    return result;
+  }
+
+  @Post('signin/public-address')
   async singinWithPublicAddress(@Body() body: SigninPublicAddressInput) {
     const result = await this.authService.singinWithPublicAddress(body);
     return result;

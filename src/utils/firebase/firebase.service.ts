@@ -1,27 +1,29 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import * as admin from 'firebase-admin';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { FirebaseOptions, initializeApp } from 'firebase/app';
-import {
-  getAuth,
-  createUserWithEmailAndPassword,
-  updateProfile,
-  signInWithEmailAndPassword,
-  signInWithCustomToken,
-} from 'firebase/auth';
-import { FirebaseAdminConfig, FirebaseClientConfig } from 'src/common/configs/config.interface';
+import { getAuth } from 'firebase/auth';
 import { ConfigService } from '@nestjs/config';
+import { UuidService } from '../uuid/uuid.service';
+import { PaginationService } from '../pagination/pagination.service';
+import { CommonStorageService } from '../common-storage-service.interface';
 
 @Injectable()
-export class FirebaseService {
+export class FirebaseService implements CommonStorageService {
   public firestore: admin.firestore.Firestore;
   public auth: any;
   public firebaseAuth: any;
   public storage: any;
+  public database: any;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private readonly paginationService: PaginationService,
+    private readonly uuidService: UuidService
+  ) {
     this.firestore = admin.firestore();
     this.auth = admin.auth();
+    this.database = admin.database();
     /* const firebaseConfigPath = process.env.GOOGLE_FIREBASE_CONFIG;
     const firebaseConfig = require(firebaseConfigPath); */
 
@@ -40,32 +42,149 @@ export class FirebaseService {
     this.storage = getStorage(app);
   }
 
-  getAuth() {
-    return admin.auth();
+  async create(collectionName: string, payload: any) {
+    if (!payload.id) {
+      const id = await this.uuidService.generateUuid();
+      Object.assign(payload, { id });
+    }
+    const data = {
+      ...payload,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const id = payload.id;
+    const collections = this.firestore.collection(`${collectionName}`);
+    await collections.doc(id).set(data);
+    const result = await collections.doc(id).get();
+    return result.data();
   }
 
-  getFirestore() {
-    return admin.firestore();
+  async update(collectionName: string, id: string, payload: any) {
+    const collections = this.firestore.collection(`${collectionName}`);
+    const collection = await collections.doc(id).get();
+    if (!collection.exists) {
+      throw new HttpException(
+        {
+          status: HttpStatus.NOT_FOUND,
+          errors: {
+            message: 'Collection not found',
+          },
+        },
+        HttpStatus.NOT_FOUND
+      );
+    }
+    await collections.doc(id).update(payload);
+    const result = await collections.doc(id).get();
+    return result.data();
   }
 
-  getFirebaseAuth() {
-    return this.firebaseAuth;
+  async delete(collectionName: string, id: string) {
+    const collections = this.firestore.collection(`${collectionName}`);
+    const collection = await collections.doc(id).get();
+    if (!collection.exists) {
+      throw new HttpException(
+        {
+          status: HttpStatus.NOT_FOUND,
+          errors: {
+            message: 'Collection not found',
+          },
+        },
+        HttpStatus.NOT_FOUND
+      );
+    }
+    await collections.doc(id).delete();
+    return true;
   }
 
-  createUserWithEmailAndPassword(email: string, password: string) {
-    return createUserWithEmailAndPassword(this.firebaseAuth, email, password);
+  async paginate(collectionName: string, filter: any, order: any, page: number, limit: number) {
+    const collections = this.firestore.collection(`${collectionName}`);
+    let query: any = collections;
+    for (const [key, value] of Object.entries(filter)) {
+      if (value['symbol']) {
+        query = query.where(key, value['symbol'], value['value']);
+      } else {
+        query = query.where(key, '==', value);
+      }
+    }
+    for (const [key, value] of Object.entries(order)) {
+      query = query.orderBy(key, value);
+    }
+    const collectionDatas = await query.get();
+    const datas = [];
+    for (const doc of collectionDatas.docs) {
+      const u = doc.data();
+      datas.push(u);
+    }
+    const result = {
+      results: [],
+      page: Number.parseInt(`${page}`),
+      limit: Number.parseInt(`${limit}`),
+      totalPages: 0,
+      totalResults: 0,
+    };
+    const totalResults = datas.length;
+    const totalPages = Math.ceil(totalResults / limit);
+    result.totalResults = totalResults;
+    result.totalPages = totalPages;
+    result.results = await this.paginationService.paginate(datas, limit, page);
+    return result;
   }
 
-  updateProfile(user: any, payload: any) {
-    return updateProfile(user, payload);
+  async gets(collectionName: string, filter: any, order: any, options: any) {
+    const collections = this.firestore.collection(`${collectionName}`);
+    let query: any = collections;
+    for (const [key, value] of Object.entries(filter)) {
+      if (value['symbol']) {
+        query = query.where(key, `${value['symbol']}`, value['value']);
+      } else {
+        query = query.where(key, '==', value);
+      }
+    }
+
+    for (const [key, value] of Object.entries(order)) {
+      query = query.orderBy(key, value);
+    }
+
+    for (const [key, value] of Object.entries(options)) {
+      switch (key) {
+        case 'limit':
+          query = query.limit(value);
+          break;
+        default:
+          break;
+      }
+    }
+
+    const collectionDatas = await query.get();
+    const datas = [];
+    for (const doc of collectionDatas.docs) {
+      const u = doc.data();
+      datas.push(u);
+    }
+    return datas;
   }
 
-  signInWithEmailAndPassword(email: string, password: string) {
-    return signInWithEmailAndPassword(this.firebaseAuth, email, password);
+  async get(collectionName: string, id: string) {
+    const collections = this.firestore.collection(`${collectionName}`);
+    const collection = await collections.doc(id).get();
+    if (!collection.exists) {
+      throw new HttpException(
+        {
+          status: HttpStatus.NOT_FOUND,
+          errors: {
+            message: 'Collection not found',
+          },
+        },
+        HttpStatus.NOT_FOUND
+      );
+    }
+    return collection.data();
   }
 
-  signInWithCustomToken(token: string) {
-    return signInWithCustomToken(this.firebaseAuth, token);
+  async saveOrUpdateRealTime(refString: string, payload: any) {
+    const db = this.database;
+    const ref = db.ref(`${refString}`);
+    await ref.set(payload);
   }
 
   async uploadFile(prefix: string, file: Express.Multer.File) {
@@ -77,7 +196,8 @@ export class FirebaseService {
     };
     try {
       const uploadTask = await uploadBytes(storageRef, file.buffer, metadata);
-      return uploadTask;
+      const downloadTask = await getDownloadURL(ref(this.storage, `${uploadTask.metadata.fullPath}`));
+      return downloadTask;
     } catch (error) {
       throw new HttpException(
         {
@@ -89,6 +209,66 @@ export class FirebaseService {
         HttpStatus.BAD_REQUEST
       );
     }
+  }
+
+  async uploadText(prefix: string, text: string, fileName: string) {
+    const storageRef = ref(this.storage, `${prefix}/${fileName}`);
+
+    const metadata = {
+      contentType: 'text/plain',
+    };
+    try {
+      const uploadTask = await uploadBytes(storageRef, Buffer.from(text), metadata);
+      const downloadTask = await getDownloadURL(ref(this.storage, `${uploadTask.metadata.fullPath}`));
+      return downloadTask;
+    } catch (error) {
+      throw new HttpException(
+        {
+          status: HttpStatus.BAD_REQUEST,
+          errors: {
+            message: error._baseMessage,
+          },
+        },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  async fecthTextURL(url: string) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const textContent = await response.text();
+      return textContent;
+    } catch (error) {
+      throw new Error('There was a problem with the fetch operation: ' + error);
+    }
+  }
+
+  async generateSignedUrl(filename: string): Promise<string> {
+    const bucket = admin.storage().bucket(ref(this.storage).bucket);
+
+    const cors = [
+      {
+        origin: ['*'],
+        method: ['*'],
+        responseHeader: ['Content-Type'],
+        maxAgeSeconds: 3600,
+      },
+    ];
+    const metadata = { cors };
+    bucket.setMetadata(metadata);
+
+    const options: any = {
+      version: 'v4',
+      action: 'write',
+      expires: Date.now() + 15 * 60 * 1000,
+    };
+
+    const [url] = await bucket.file(filename).getSignedUrl(options);
+    return url;
   }
 
   async downloadFile(path: string) {

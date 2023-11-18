@@ -6,8 +6,10 @@ import { AuthService } from './auth.service';
 import { SecurityConfig } from 'src/common/configs/config.interface';
 import { AuthController } from './auth.controller';
 import { FirebaseService } from 'src/utils/firebase/firebase.service';
-import { UsersService } from 'src/user/user.service';
+import { UserService } from 'src/user/user.service';
 import { PaginationService } from 'src/utils/pagination/pagination.service';
+import { UuidService } from 'src/utils/uuid/uuid.service';
+import { JwtStrategy } from './jwt.strategy';
 
 @Module({
   imports: [
@@ -26,7 +28,16 @@ import { PaginationService } from 'src/utils/pagination/pagination.service';
       inject: [ConfigService],
     }),
   ],
-  providers: [AuthService, FirebaseService, UsersService, JwtService, ConfigService, PaginationService],
+  providers: [
+    AuthService,
+    UserService,
+    FirebaseService,
+    UuidService,
+    JwtService,
+    ConfigService,
+    PaginationService,
+    JwtStrategy,
+  ],
   controllers: [AuthController],
 })
 export class AuthModule {}

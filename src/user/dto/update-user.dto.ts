@@ -1,7 +1,7 @@
-import { IsEmail, IsMobilePhone, IsNotEmpty, IsOptional } from 'class-validator';
-import { Role } from '../models/role.enum';
+import { IsEmail, IsMobilePhone, IsOptional } from 'class-validator';
+import { Role } from 'src/models/role.enum';
 
-export class CreateUserInput {
+export class UpdateUserInput {
   @IsOptional()
   profileName: string;
 
@@ -22,6 +22,9 @@ export class CreateUserInput {
   @IsOptional()
   profileImage: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   role: Role;
+
+  @IsOptional()
+  nonce: number;
 }

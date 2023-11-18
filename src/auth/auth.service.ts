@@ -3,26 +3,38 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { SecurityConfig } from 'src/common/configs/config.interface';
 import { FirebaseService } from 'src/utils/firebase/firebase.service';
-import { Token } from './models/token.interface';
-import { User } from 'src/user/models/user.interface';
 import * as ethUtil from 'ethereumjs-util';
 import { AuthenticationPubliAddressInput } from './dto/auth-public-address.input';
 import { SigninPublicAddressInput } from './dto/singin-public-address.input';
-import { UsersService } from 'src/user/user.service';
+import { UserService } from 'src/user/user.service';
+import { Token } from 'src/models/token.interface';
+import { User } from 'src/models/user.interface';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private firebaseService: FirebaseService,
-    private userService: UsersService,
+    private storageService: FirebaseService,
+    private userService: UserService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService
   ) {}
+
+  async mockSignIn(payload: any) {
+    const { publicAddress } = payload;
+    const user: User = await this.userService.getUserByPublicAddress(publicAddress);
+    if (user) {
+      const tokens = this.generateTokens({ userId: user.id });
+      return { user, tokens };
+    } else {
+      throw new Error('not found or error on create public address');
+    }
+  }
+
   async singinWithPublicAddress(payload: SigninPublicAddressInput) {
     const { publicAddress } = payload;
     try {
       const user: User = await this.userService.getUserByPublicAddress(publicAddress);
-      const nonce: number = await this.userService.randomUserNonce(user);
+      const nonce: number = await this.userService.randomUserNonce(user.id);
       if (user) {
         const result = {
           status: 200,
@@ -57,9 +69,11 @@ export class AuthService {
       const addressBuffer = ethUtil.publicToAddress(publicKey);
       const address = ethUtil.bufferToHex(addressBuffer);
       if (address.toLowerCase() === publicAddress.toLowerCase()) {
-        await this.userService.randomUserNonce(user);
-        Logger.debug('--- auth success > %o', user);
-        const tokens = this.generateTokens({ userId: user.uid });
+        await this.userService.randomUserNonce(user.id);
+        const tokens = this.generateTokens({ userId: user.id });
+        try {
+          await this.storageService.saveOrUpdateRealTime(`${address}/latestMessage`, { content: 'just logged in' });
+        } catch (error) {}
         return {
           status: 200,
           message: 'success authentication with publicAddress',
@@ -92,35 +106,32 @@ export class AuthService {
     }
   }
 
-  async validateUser(firebaseUser: any) {
-    const userId = firebaseUser;
-    const user = await this.firebaseService.firestore.collection('users').doc(`${userId}`).get();
-    let result: FirebaseFirestore.DocumentData | null | undefined;
-    if (user.exists) {
-      result = user.data();
-    } else {
-      const user = await this.createInitUser(userId);
-      result = user.data();
+  async validateUser(id: any) {
+    if (id == null || id == undefined) {
+      throw new HttpException(
+        {
+          status: HttpStatus.CONFLICT,
+          errors: {
+            message: 'Validate user fail',
+          },
+        },
+        HttpStatus.CONFLICT
+      );
     }
-    return result;
-  }
-
-  async createInitUser(id: string) {
-    const data = {};
-    Object.assign(data, {
-      uid: id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-    const userCollectionRef = this.firebaseService.firestore.collection('users');
-    const find = await userCollectionRef.doc(`${id}`).get();
-    if (!find.exists) {
-      await userCollectionRef.doc(`${id}`).set(data);
+    const user = await this.storageService.get('users', id);
+    if (user) {
+      return user;
     } else {
-      await userCollectionRef.doc(`${id}`).update(data);
+      throw new HttpException(
+        {
+          status: HttpStatus.CONFLICT,
+          errors: {
+            message: 'Validate user fail',
+          },
+        },
+        HttpStatus.CONFLICT
+      );
     }
-    const user = await userCollectionRef.doc(`${id}`).get();
-    return user;
   }
 
   generateTokens(payload: { userId: string }): Token {

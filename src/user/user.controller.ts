@@ -1,15 +1,14 @@
 import { Body, Controller, Delete, Get, Param, Patch, Query } from '@nestjs/common';
 
 import { Auth } from 'src/auth/decorator/auth.decorator';
-import { FirebaseService } from 'src/utils/firebase/firebase.service';
-import { UserListDto } from './dto/user-list.dto';
-import { UpdateUserInput } from './dto/update-user.input';
-import { Role } from './models/role.enum';
-import { UsersService } from './user.service';
+import { UserListDto } from './dto/get-list.dto';
+import { UpdateUserInput } from './dto/update-user.dto';
+import { Role } from 'src/models/role.enum';
+import { UserService } from './user.service';
 
 @Controller('users')
 export class UsersController {
-  constructor(private userService: UsersService) {}
+  constructor(private userService: UserService) {}
 
   @Auth(Role.ADMIN)
   @Get()
