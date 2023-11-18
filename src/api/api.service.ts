@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
-import _ from 'lodash';
+import * as _ from 'lodash';
 import { ConversationMessageType } from 'src/models/conversation-message.interface';
 import { ConversationType } from 'src/models/conversation.interface';
 import { FirebaseService } from 'src/utils/firebase/firebase.service';
