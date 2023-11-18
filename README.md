@@ -1,4 +1,4 @@
-# Monad NFT Distribution backend
+# Eth Global backend
 
 ## Tools
  - Firebase Cloud Functions
@@ -30,8 +30,8 @@ yarn install
 
 You need to create Firebase Admin SDK credential and Firebase Client credential for running application
 
-1. Download Firebase Admin SDK and save as monad-firebase-adminsdk.json
-2. Download Firebase Client and save as monad-firebase-config.json
+1. Download Firebase Admin SDK and save as firebase-adminsdk.json
+2. Download Firebase Client and save as firebase-config.json
 
 Running script to generate enironment config
 

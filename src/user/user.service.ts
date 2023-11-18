@@ -128,7 +128,7 @@ export class UsersService {
         profileImage: '',
         mobilePhone: '',
         publicAddress,
-        email: `${publicAddress}@socialmonad.com`,
+        email: `${publicAddress}@ethglobal.com`,
         createdAt: new Date(),
         updatedAt: new Date(),
         role: 'USER',

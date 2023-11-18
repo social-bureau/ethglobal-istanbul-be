@@ -1,7 +1,7 @@
 version: '3.8'
 services:
-  monad-backend-api:
-    container_name: monad-backend-api
+  ethglobal-backend-api:
+    container_name: ethglobal-backend-api
     build:
       context: .
       dockerfile: Dockerfile
