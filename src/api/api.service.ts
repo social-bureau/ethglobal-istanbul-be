@@ -2,8 +2,6 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { FirebaseService } from 'src/utils/firebase/firebase.service';
 import { PaginationService } from 'src/utils/pagination/pagination.service';
 import { UuidService } from 'src/utils/uuid/uuid.service';
-import _ from 'lodash';
-import { Contact } from 'src/models/contact.inerface';
 
 @Injectable()
 export class ApiService {
@@ -70,6 +68,44 @@ export class ApiService {
       contact = await this.storageService.create('contacts', payload);
     } else {
       contact = contacts[0];
+    }
+    return contact;
+  }
+
+  async getContactListByUserId(userId: string, page: number, limit: number) {
+    const contacts = await this.storageService.paginate(
+      'contacts',
+      { ownerUserId: userId },
+      { createdAt: 'desc' },
+      page,
+      limit
+    );
+    return contacts;
+  }
+
+  async getContactByUserIdAndContactId(userId: string, contactId: string) {
+    const contact = await this.storageService.get('contacts', contactId);
+    if (!contact) {
+      throw new HttpException(
+        {
+          status: HttpStatus.NOT_FOUND,
+          errors: {
+            message: 'Contact not found',
+          },
+        },
+        HttpStatus.NOT_FOUND
+      );
+    }
+    if (userId !== contact.ownerUserId) {
+      throw new HttpException(
+        {
+          status: HttpStatus.NOT_FOUND,
+          errors: {
+            message: 'Contact not found',
+          },
+        },
+        HttpStatus.NOT_FOUND
+      );
     }
     return contact;
   }
