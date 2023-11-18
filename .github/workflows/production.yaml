@@ -25,6 +25,3 @@ jobs:
     env:
       CONTAINER_DEV_IMAGE: registry.digitalocean.com/ethglobal-istanbull-n2n:${{ github.sha }}
       CONTAINER_LATEST_IMAGE: registry.digitalocean.com/ethglobal-istanbull-n2n:latest
-
-    only:
-      - production
