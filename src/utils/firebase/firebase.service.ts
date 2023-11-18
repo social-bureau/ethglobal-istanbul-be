@@ -238,12 +238,28 @@ export class FirebaseService implements CommonStorageService {
     try {
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        throw new HttpException(
+          {
+            status: HttpStatus.BAD_REQUEST,
+            errors: {
+              message: 'Network response was not ok',
+            },
+          },
+          HttpStatus.BAD_REQUEST
+        );
       }
       const textContent = await response.text();
       return textContent;
     } catch (error) {
-      throw new Error('There was a problem with the fetch operation: ' + error);
+      throw new HttpException(
+        {
+          status: HttpStatus.BAD_REQUEST,
+          errors: {
+            message: 'There was a problem with the fetch operation: ' + error,
+          },
+        },
+        HttpStatus.BAD_REQUEST
+      );
     }
   }
 

@@ -164,4 +164,11 @@ export class ApiController {
     const conversations = await this.apiService.getMediaConversation(user.id, conversationId, contentType, page, limit);
     return conversations;
   }
+
+  @Auth()
+  @Get('signed-url/:filename')
+  async getSignedUrl(@Param('filename') filename: string) {
+    const contact = await this.firebaseService.generateSignedUrl(filename);
+    return contact;
+  }
 }
