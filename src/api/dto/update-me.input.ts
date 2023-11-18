@@ -29,4 +29,7 @@ export class UpdateMeInput {
 
   @IsOptional()
   picture: string;
+
+  @IsOptional()
+  lensId: string;
 }
