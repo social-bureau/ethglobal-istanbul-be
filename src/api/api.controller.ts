@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Patch, Post, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { ApiService } from './api.service';
 import { FirebaseService } from 'src/utils/firebase/firebase.service';
 import { Auth } from 'src/auth/decorator/auth.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateMeInput } from './dto/update-me.input';
+import { CreateContactInput } from './dto/create-contact.input';
 
 @Controller('api')
 export class ApiController {
@@ -26,16 +27,25 @@ export class ApiController {
       const time = new Date();
       const res = await this.firebaseService.uploadFile(`files/${rand}/${time.getTime()}`, file);
       if (res) {
-        body.picture = res.metadata.fullPath;
+        body.picture = res;
       }
     }
     const user = await this.apiService.updateUser(req.user.id, body);
     return user;
   }
 
-  @Post('files/download')
-  async downloadFile(@Body('path') path: string) {
-    const response = await this.firebaseService.downloadFile(path);
-    return response;
+  @Auth()
+  @Get('users/:id')
+  async userById(@Param('id') id: string) {
+    const user = await this.apiService.getUserById(id);
+    return user;
+  }
+
+  @Auth()
+  @Post('contacts')
+  async createContact(@Req() req: any, @Body() body: CreateContactInput) {
+    const { user } = req;
+    const contact = await this.apiService.createContact({ ...body, ownerUserId: user.id });
+    return contact;
   }
 }

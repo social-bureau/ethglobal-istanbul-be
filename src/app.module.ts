@@ -11,6 +11,8 @@ import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { GqlConfigService } from './gql-config.service';
 import { FirebaseService } from './utils/firebase/firebase.service';
 import { ApiModule } from './api/api.module';
+import { UuidService } from './utils/uuid/uuid.service';
+import { PaginationService } from './utils/pagination/pagination.service';
 
 @Module({
   imports: [
@@ -24,6 +26,6 @@ import { ApiModule } from './api/api.module';
     ApiModule,
   ],
   controllers: [AppController],
-  providers: [AppService, AppResolver, FirebaseService],
+  providers: [AppService, AppResolver, FirebaseService, UuidService, PaginationService],
 })
 export class AppModule {}
