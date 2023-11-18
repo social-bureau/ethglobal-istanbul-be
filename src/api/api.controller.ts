@@ -18,6 +18,8 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateMeInput } from './dto/update-me.input';
 import { CreateContactInput } from './dto/create-contact.input';
 import { GetContactDto } from './dto/get-contact.dto';
+import { ConversationType } from 'src/models/conversation.interface';
+import { CreateConversationInput } from './dto/create-conversation.input';
 
 @Controller('api')
 export class ApiController {
@@ -77,5 +79,27 @@ export class ApiController {
     const { user } = req;
     const contact = await this.apiService.getContactByUserIdAndContactId(user.id, contactId);
     return contact;
+  }
+
+  @Auth()
+  @Post('chats/conversations/request')
+  async findOrCreateConversation(@Req() req: any, @Body() body: CreateConversationInput) {
+    const { user } = req;
+    const { userIds, type = ConversationType.DM } = body;
+    let conversation: any;
+    switch (type) {
+      case ConversationType.GROUP:
+        break;
+      case ConversationType.NEGO:
+        break;
+      case ConversationType.PAGE:
+        break;
+      case ConversationType.DM:
+      default:
+        const participantIds = [user.id, userIds[0]];
+        conversation = await this.apiService.findOrCreateConversation({ type, participantIds });
+        break;
+    }
+    return conversation;
   }
 }

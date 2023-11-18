@@ -1,4 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { ConversationType } from 'src/models/conversation.interface';
 import { FirebaseService } from 'src/utils/firebase/firebase.service';
 import { PaginationService } from 'src/utils/pagination/pagination.service';
 import { UuidService } from 'src/utils/uuid/uuid.service';
@@ -108,5 +109,45 @@ export class ApiService {
       );
     }
     return contact;
+  }
+
+  async findOrCreateConversation(payload: any) {
+    const { type, participantIds } = payload;
+    let conversation: any;
+    switch (type) {
+      case ConversationType.GROUP:
+        break;
+      case ConversationType.NEGO:
+        break;
+      case ConversationType.PAGE:
+        break;
+      case ConversationType.DM:
+      default:
+        const participants = [];
+        for (const participantId of participantIds) {
+          const user = await this.storageService.get('users', participantId);
+          const participant = {
+            id: user.id,
+            publicAddress: user.publicAddress,
+          };
+          participants.push(participant);
+        }
+        const conversations = await this.storageService.gets(
+          'conversations',
+          {
+            type,
+            participants: participants,
+          },
+          {},
+          {}
+        );
+        if (conversations.length == 0) {
+          conversation = await this.storageService.create('conversations', { type, participants });
+        } else {
+          conversation = conversations[0];
+        }
+        break;
+    }
+    return conversation;
   }
 }
