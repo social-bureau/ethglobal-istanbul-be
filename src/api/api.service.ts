@@ -1,4 +1,5 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import _ from 'lodash';
 import { ConversationType } from 'src/models/conversation.interface';
 import { FirebaseService } from 'src/utils/firebase/firebase.service';
 import { PaginationService } from 'src/utils/pagination/pagination.service';
@@ -111,6 +112,37 @@ export class ApiService {
     return contact;
   }
 
+  async isParticipant(conversationId: string, userId: string) {
+    const conversation = await this.storageService.get('conversations', conversationId);
+    if (!conversation) {
+      throw new HttpException(
+        {
+          status: HttpStatus.NOT_FOUND,
+          errors: {
+            message: 'Conversation not found',
+          },
+        },
+        HttpStatus.NOT_FOUND
+      );
+    }
+
+    const findUserInConversation = await _.find(conversation.participants, function (o) {
+      return o.id == userId;
+    });
+    if (!findUserInConversation) {
+      throw new HttpException(
+        {
+          status: HttpStatus.CONFLICT,
+          errors: {
+            message: 'Not allow to send this conversation',
+          },
+        },
+        HttpStatus.CONFLICT
+      );
+    }
+    return conversation;
+  }
+
   async findOrCreateConversation(payload: any) {
     const { type, participantIds } = payload;
     let conversation: any;
@@ -149,5 +181,49 @@ export class ApiService {
         break;
     }
     return conversation;
+  }
+
+  async getConversation(userId: string, conversationId: string) {
+    const conversationPaticipatns = await this.isParticipant(conversationId, userId);
+    const conversation = await this.storageService.get('conversations', conversationId);
+    return { participants: conversationPaticipatns.participants, conversation };
+  }
+
+  async getConversationListByUserId(userId: string, page: number, limit: number) {
+    const user = await this.storageService.get('users', userId);
+    const participant = {
+      id: user.id,
+      publicAddress: user.publicAddress,
+    };
+
+    const conversations = await this.storageService.paginate(
+      'conversations',
+      { participants: { symbol: 'array-contains', value: participant } },
+      { updatedAt: 'desc' },
+      page,
+      limit
+    );
+    for (const conversation of conversations.results) {
+      const messages = await this.storageService.gets(
+        'conversation-messages',
+        { conversationId: conversation.id },
+        { createdAt: 'desc' },
+        { limit: 1 }
+      );
+      let latestMessage = null;
+      if (messages.length > 0) {
+        latestMessage = messages[0];
+        latestMessage.content = await this.storageService.fecthTextURL(latestMessage.content);
+      }
+      const participants = [];
+      for (const participant of conversation.participants) {
+        const user = await this.storageService.get('users', participant.id);
+        delete user.nonce;
+        participants.push(user);
+      }
+      delete conversation.messages;
+      Object.assign(conversation, { latestMessage, participants });
+    }
+    return conversations;
   }
 }

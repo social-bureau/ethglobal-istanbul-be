@@ -20,6 +20,7 @@ import { CreateContactInput } from './dto/create-contact.input';
 import { GetContactDto } from './dto/get-contact.dto';
 import { ConversationType } from 'src/models/conversation.interface';
 import { CreateConversationInput } from './dto/create-conversation.input';
+import { GetMyConversationDto } from './dto/get-my-conversation.dto';
 
 @Controller('api')
 export class ApiController {
@@ -101,5 +102,22 @@ export class ApiController {
         break;
     }
     return conversation;
+  }
+
+  @Auth()
+  @Get('chats/conversation/:conversationId')
+  async getConversation(@Req() req: any, @Param('conversationId') conversationId: string) {
+    const { user } = req;
+    const conversations = await this.apiService.getConversation(user.id, conversationId);
+    return conversations;
+  }
+
+  @Auth()
+  @Get('chats/conversations/me')
+  async getMyConversationList(@Req() req: any, @Query() query: GetMyConversationDto) {
+    const { user } = req;
+    const { page = 1, limit = 10 } = query;
+    const conversations = await this.apiService.getConversationListByUserId(user.id, page, limit);
+    return conversations;
   }
 }
